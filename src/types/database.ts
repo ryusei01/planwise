@@ -109,3 +109,43 @@ export interface Subscription {
   updated_at: string;
 }
 
+/**
+ * Commitment types for Mezamee-style penalty feature
+ * ID: DB_TYPES_COMMITMENT_001
+ */
+export type CommitmentStatus = 'active' | 'achieved' | 'failed' | 'cancelled';
+export type PenaltyStatus = 'pending' | 'charged' | 'refunded' | 'waived';
+
+/**
+ * Goal Commitment - User's pledge to complete a goal
+ * If not achieved by deadline, the commitment amount is charged
+ */
+export interface GoalCommitment {
+  id: string;
+  goal_id: string;
+  user_id: string;
+  amount: number; // Amount in JPY
+  currency: string;
+  threshold_percent: number; // Minimum completion % to avoid penalty (default: 100)
+  status: CommitmentStatus;
+  stripe_payment_intent_id: string | null; // Pre-authorized payment
+  created_at: string;
+  evaluated_at: string | null;
+}
+
+/**
+ * Penalty Charge - Record of penalty charges for failed commitments
+ */
+export interface PenaltyCharge {
+  id: string;
+  commitment_id: string;
+  user_id: string;
+  amount: number;
+  currency: string;
+  status: PenaltyStatus;
+  actual_completion_percent: number;
+  stripe_charge_id: string | null;
+  charged_at: string | null;
+  created_at: string;
+}
+

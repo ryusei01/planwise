@@ -164,6 +164,44 @@ export interface Database {
         };
         Update: Partial<Database['public']['Tables']['subscriptions']['Insert']>;
       };
+      goal_commitments: {
+        Row: {
+          id: string;
+          goal_id: string;
+          user_id: string;
+          amount: number;
+          currency: string;
+          threshold_percent: number;
+          status: 'active' | 'achieved' | 'failed' | 'cancelled';
+          stripe_payment_intent_id: string | null;
+          created_at: string;
+          evaluated_at: string | null;
+        };
+        Insert: Omit<Database['public']['Tables']['goal_commitments']['Row'], 'id' | 'created_at'> & {
+          id?: string;
+          created_at?: string;
+        };
+        Update: Partial<Database['public']['Tables']['goal_commitments']['Insert']>;
+      };
+      penalty_charges: {
+        Row: {
+          id: string;
+          commitment_id: string;
+          user_id: string;
+          amount: number;
+          currency: string;
+          status: 'pending' | 'charged' | 'refunded' | 'waived';
+          actual_completion_percent: number;
+          stripe_charge_id: string | null;
+          charged_at: string | null;
+          created_at: string;
+        };
+        Insert: Omit<Database['public']['Tables']['penalty_charges']['Row'], 'id' | 'created_at'> & {
+          id?: string;
+          created_at?: string;
+        };
+        Update: Partial<Database['public']['Tables']['penalty_charges']['Insert']>;
+      };
     };
     Functions: {
       create_goal_with_initial_plan: {

@@ -15,7 +15,9 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { goalRepository, CreateGoalParams } from '../repositories/goal.repository';
+import { commitmentRepository } from '../repositories/commitment.repository';
 import { PeriodType } from '../types/database';
+import { CommitmentSetup } from './CommitmentSetup';
 
 interface CreateGoalModalProps {
   visible: boolean;
@@ -29,6 +31,13 @@ export function CreateGoalModal({ visible, onClose, onSuccess }: CreateGoalModal
   const [category, setCategory] = useState('');
   const [periodType, setPeriodType] = useState<PeriodType>('month');
   const [loading, setLoading] = useState(false);
+  const [commitmentAmount, setCommitmentAmount] = useState<number | null>(null);
+  const [commitmentThreshold, setCommitmentThreshold] = useState<number>(100);
+
+  const handleCommitmentChange = (amount: number | null, threshold: number) => {
+    setCommitmentAmount(amount);
+    setCommitmentThreshold(threshold);
+  };
 
   // Calculate default dates based on period type
   const getDefaultDates = (type: PeriodType): { start: string; end: string } => {
@@ -67,8 +76,27 @@ export function CreateGoalModal({ visible, onClose, onSuccess }: CreateGoalModal
         end_date: dates.end,
       };
 
-      await goalRepository.createGoalWithInitialPlan(params);
-      Alert.alert('成功', '目標を作成しました', [
+      const result = await goalRepository.createGoalWithInitialPlan(params);
+
+      // Create commitment if set
+      if (commitmentAmount && commitmentAmount > 0) {
+        try {
+          await commitmentRepository.createCommitment({
+            goal_id: result.goal_id,
+            amount: commitmentAmount,
+            threshold_percent: commitmentThreshold,
+          });
+        } catch (commitmentError) {
+          console.warn('Failed to create commitment:', commitmentError);
+          // Continue even if commitment creation fails
+        }
+      }
+
+      const successMessage = commitmentAmount 
+        ? `目標を作成しました。コミットメント: ¥${commitmentAmount.toLocaleString()}`
+        : '目標を作成しました';
+
+      Alert.alert('成功', successMessage, [
         {
           text: 'OK',
           onPress: () => {
@@ -90,6 +118,8 @@ export function CreateGoalModal({ visible, onClose, onSuccess }: CreateGoalModal
     setDescription('');
     setCategory('');
     setPeriodType('month');
+    setCommitmentAmount(null);
+    setCommitmentThreshold(100);
   };
 
   const handleClose = () => {
@@ -190,6 +220,9 @@ export function CreateGoalModal({ visible, onClose, onSuccess }: CreateGoalModal
                 </TouchableOpacity>
               </View>
             </View>
+
+            {/* Commitment Setup (Mezamee-style) */}
+            <CommitmentSetup onCommitmentChange={handleCommitmentChange} />
 
             <TouchableOpacity
               style={[styles.createButton, loading && styles.createButtonDisabled]}
