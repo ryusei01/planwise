@@ -97,7 +97,8 @@ export class GoalRepository {
       throw new Error('User not authenticated');
     }
 
-    const { data, error } = await supabase.rpc('create_goal_with_initial_plan', {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data, error } = await (supabase.rpc as any)('create_goal_with_initial_plan', {
       p_title: params.title,
       p_description: params.description || null,
       p_category: params.category || null,
@@ -111,13 +112,14 @@ export class GoalRepository {
       throw error;
     }
 
-    if (!data || !data.goal_id || !data.plan_id) {
+    const result = data as { goal_id: string; plan_id: string } | null;
+    if (!result || !result.goal_id || !result.plan_id) {
       throw new Error('Failed to create goal with initial plan');
     }
 
     return {
-      goal_id: data.goal_id,
-      plan_id: data.plan_id,
+      goal_id: result.goal_id,
+      plan_id: result.plan_id,
     };
   }
 
@@ -125,7 +127,8 @@ export class GoalRepository {
    * Update goal
    */
   async updateGoal(id: string, updates: Partial<Goal>): Promise<Goal> {
-    const { data, error } = await supabase
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data, error } = await (supabase as any)
       .from('goals')
       .update(updates)
       .eq('id', id)
@@ -136,7 +139,7 @@ export class GoalRepository {
       throw error;
     }
 
-    return data;
+    return data as Goal;
   }
 
   /**

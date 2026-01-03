@@ -63,18 +63,12 @@ export default function GoalsScreen() {
             <Text style={styles.emptySubtext}>新しい目標を作成しましょう</Text>
           </View>
         ) : (
-          goals.map((goal) => {
-            const totalTasks = goal.tasks.length;
-            const doneTasks = goal.tasks.filter((t) => t.status === 'done').length;
-            return (
-              <GoalCard
-                key={goal.id}
-                goal={goal}
-                totalTasks={totalTasks}
-                doneTasks={doneTasks}
-              />
-            );
-          })
+          goals.map((goal) => (
+            <GoalCard
+              key={goal.id}
+              goal={goal}
+            />
+          ))
         )}
       </ScrollView>
 
