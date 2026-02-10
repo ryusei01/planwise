@@ -68,7 +68,8 @@ export class TaskRepository {
    * Create task
    */
   async createTask(params: CreateTaskParams): Promise<Task> {
-    const { data, error } = await supabase
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data, error } = await (supabase as any)
       .from('tasks')
       .insert({
         plan_id: params.plan_id,
@@ -94,7 +95,8 @@ export class TaskRepository {
    * Update task
    */
   async updateTask(id: string, params: UpdateTaskParams): Promise<Task> {
-    const { data, error } = await supabase
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data, error } = await (supabase as any)
       .from('tasks')
       .update(params)
       .eq('id', id)
@@ -105,7 +107,7 @@ export class TaskRepository {
       throw error;
     }
 
-    return data;
+    return data as Task;
   }
 
   /**
@@ -126,7 +128,8 @@ export class TaskRepository {
    * Toggle task done status using RPC
    */
   async toggleTaskDone(taskId: string, done: boolean): Promise<void> {
-    const { error } = await supabase.rpc('toggle_task_done', {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { error } = await (supabase.rpc as any)('toggle_task_done', {
       task_id: taskId,
       done,
     });

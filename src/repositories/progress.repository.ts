@@ -10,7 +10,8 @@ export class ProgressRepository {
    * Upsert goal snapshot using RPC
    */
   async upsertGoalSnapshot(goalId: string, date: string): Promise<void> {
-    const { error } = await supabase.rpc('upsert_goal_snapshot', {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { error } = await (supabase.rpc as any)('upsert_goal_snapshot', {
       goal_id: goalId,
       date,
     });

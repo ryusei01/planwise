@@ -8,29 +8,36 @@ import { useLocalSearchParams } from 'expo-router';
 import { goalRepository, GoalWithPlan } from '../../src/repositories/goal.repository';
 import { taskRepository } from '../../src/repositories/task.repository';
 import { subscriptionRepository } from '../../src/repositories/subscription.repository';
-import { Task } from '../../src/types/database';
+import { commitmentRepository } from '../../src/repositories/commitment.repository';
+import { Task, GoalCommitment } from '../../src/types/database';
 import { TaskItem } from '../../src/components/TaskItem';
 import { ProgressBar } from '../../src/components/ProgressBar';
+import { CommitmentBadge } from '../../src/components/CommitmentBadge';
 import { calculateProgressFromTasks } from '../../src/lib/progress';
+import { aiClient } from '../../src/lib/ai-client';
 
 export default function GoalDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const [goal, setGoal] = useState<GoalWithPlan | null>(null);
   const [tasks, setTasks] = useState<Task[]>([]);
+  const [commitment, setCommitment] = useState<GoalCommitment | null>(null);
   const [loading, setLoading] = useState(true);
+  const [aiLoading, setAiLoading] = useState(false);
   const [hasActiveSubscription, setHasActiveSubscription] = useState(false);
 
   const loadData = async () => {
     if (!id) return;
 
     try {
-      const [goalData, subscription] = await Promise.all([
+      const [goalData, subscription, commitmentData] = await Promise.all([
         goalRepository.getGoalWithPlan(id),
         subscriptionRepository.hasActiveSubscription(),
+        commitmentRepository.getCommitmentByGoalId(id).catch(() => null),
       ]);
 
       setGoal(goalData);
       setHasActiveSubscription(subscription);
+      setCommitment(commitmentData);
 
       if (goalData?.plan) {
         const taskData = await taskRepository.getTasksByPlanId(goalData.plan.id);
@@ -60,7 +67,7 @@ export default function GoalDetailScreen() {
     }
   };
 
-  const handleAIFeature = (type: 'split' | 'replan') => {
+  const handleAIFeature = async (type: 'split' | 'replan') => {
     if (!hasActiveSubscription) {
       Alert.alert(
         '有料機能',
@@ -76,8 +83,38 @@ export default function GoalDetailScreen() {
       return;
     }
 
-    // TODO(#GOAL_DETAIL_006): AI 機能を実装（モック）
-    Alert.alert('情報', `${type === 'split' ? 'AI で分割' : 'AI で立て直し'}機能は今後実装予定です`);
+    if (!goal) return;
+
+    setAiLoading(true);
+    try {
+      if (type === 'split') {
+        const result = await aiClient.splitGoalIntoTasks(
+          goal.title,
+          goal.description,
+          goal.start_date,
+          goal.end_date
+        );
+        Alert.alert(
+          'AI分割結果',
+          `${result.reasoning}\n\n提案タスク: ${result.tasks.length}個`,
+          [{ text: 'OK' }]
+        );
+      } else {
+        const daysRemaining = Math.ceil(
+          (new Date(goal.end_date).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24)
+        );
+        const result = await aiClient.replanTasks(goal.title, tasks, daysRemaining);
+        Alert.alert(
+          'AI立て直し結果',
+          result.reasoning,
+          [{ text: 'OK' }]
+        );
+      }
+    } catch (error: any) {
+      Alert.alert('エラー', error.message || 'AI機能の実行に失敗しました');
+    } finally {
+      setAiLoading(false);
+    }
   };
 
   if (loading) {
@@ -117,6 +154,14 @@ export default function GoalDetailScreen() {
 
         <ProgressBar progress={progress} />
 
+        {/* Commitment Badge */}
+        {commitment && (
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>コミットメント</Text>
+            <CommitmentBadge commitment={commitment} />
+          </View>
+        )}
+
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>タスク ({doneTasks}/{totalTasks})</Text>
           {tasks.length === 0 ? (
@@ -135,21 +180,23 @@ export default function GoalDetailScreen() {
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>AI 機能</Text>
           <TouchableOpacity
-            style={[styles.aiButton, !hasActiveSubscription && styles.aiButtonLocked]}
+            style={[styles.aiButton, !hasActiveSubscription && styles.aiButtonLocked, aiLoading && styles.aiButtonLoading]}
             onPress={() => handleAIFeature('split')}
+            disabled={aiLoading}
           >
             <Text style={styles.aiButtonText}>
               {!hasActiveSubscription && '🔒 '}
-              AI で分割
+              {aiLoading ? '処理中...' : 'AI で分割'}
             </Text>
           </TouchableOpacity>
           <TouchableOpacity
-            style={[styles.aiButton, !hasActiveSubscription && styles.aiButtonLocked]}
+            style={[styles.aiButton, !hasActiveSubscription && styles.aiButtonLocked, aiLoading && styles.aiButtonLoading]}
             onPress={() => handleAIFeature('replan')}
+            disabled={aiLoading}
           >
             <Text style={styles.aiButtonText}>
               {!hasActiveSubscription && '🔒 '}
-              AI で立て直し
+              {aiLoading ? '処理中...' : 'AI で立て直し'}
             </Text>
           </TouchableOpacity>
         </View>
@@ -214,6 +261,9 @@ const styles = StyleSheet.create({
   },
   aiButtonLocked: {
     backgroundColor: '#8E8E93',
+  },
+  aiButtonLoading: {
+    opacity: 0.6,
   },
   aiButtonText: {
     color: '#fff',

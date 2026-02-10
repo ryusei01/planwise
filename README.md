@@ -49,11 +49,28 @@ planwise/
 │   │   └── [id].tsx
 │   ├── _layout.tsx        # ルートレイアウト
 │   └── index.tsx          # ルートインデックス（認証状態に応じてリダイレクト）
+│   ├── notifications.tsx  # 通知履歴
 ├── src/
+│   ├── components/        # 再利用可能コンポーネント
+│   │   ├── CommitmentBadge.tsx
+│   │   ├── CommitmentSetup.tsx
+│   │   ├── CreateGoalModal.tsx
+│   │   ├── GoalCard.tsx
+│   │   ├── ProgressBar.tsx
+│   │   └── TaskItem.tsx
 │   ├── lib/               # ライブラリ設定
+│   │   ├── ai-client.ts   # AI クライアント（モック）
+│   │   ├── goal-utils.ts
+│   │   ├── progress.ts
 │   │   └── supabase.ts    # Supabase クライアント
 │   ├── repositories/      # データアクセス層
-│   │   └── auth.repository.ts
+│   │   ├── auth.repository.ts
+│   │   ├── commitment.repository.ts
+│   │   ├── goal.repository.ts
+│   │   ├── notification.repository.ts
+│   │   ├── progress.repository.ts
+│   │   ├── subscription.repository.ts
+│   │   └── task.repository.ts
 │   └── types/             # 型定義
 │       ├── database.ts
 │       └── supabase.ts
@@ -77,14 +94,32 @@ planwise/
 - [x] レビュー画面（今週完了数、詰まり理由）
 - [x] 有料機能ロック UI（サブスクリプション状態表示）
 - [x] 進捗ロジック（理想進捗率・実進捗率・乖離率計算）
-- [x] Repository 層の実装（Goal, Task, Subscription, Progress, Auth）
+- [x] Repository 層の実装（Goal, Task, Subscription, Progress, Auth, Notification, Commitment）
+- [x] 通知履歴画面
+- [x] AI 機能（モック実装）
+- [x] **コミットメント機能（メザミー風）** - 達成できなければ課金
 
 ### 今後実装
 
-- [ ] 通知履歴画面
-- [ ] AI 機能（モック → 実装）
-- [ ] 課金導線の実装
+- [ ] 課金導線の実装（Stripe連携）
 - [ ] タスクの編集・削除機能
+- [ ] AI 機能の本番実装（OpenAI連携）
+- [ ] 多言語対応（英語）
+
+## コミットメント機能（メザミー風）
+
+目標に対して「コミットメント金額」を設定できます。
+
+- 目標作成時に金額と達成基準（100%/80%/50%）を設定
+- 期限までに達成基準を満たさない場合、設定金額が請求される
+- 自分を追い込むことで目標達成率を向上
+
+### 使い方
+
+1. 目標作成画面で「🔥 コミットメント」を有効化
+2. 金額（¥500〜¥10,000）を選択
+3. 達成基準を選択（100%完全達成 / 80%以上 / 50%以上）
+4. 期限までにタスクを完了させる
 
 ## コーディング規約
 

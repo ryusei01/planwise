@@ -9,6 +9,8 @@ import { goalRepository, GoalWithPlan } from '../../src/repositories/goal.reposi
 import { taskRepository } from '../../src/repositories/task.repository';
 import { subscriptionRepository } from '../../src/repositories/subscription.repository';
 import { progressRepository } from '../../src/repositories/progress.repository';
+import { notificationRepository } from '../../src/repositories/notification.repository';
+import { commitmentRepository } from '../../src/repositories/commitment.repository';
 import { Goal, Task } from '../../src/types/database';
 import { GoalCard } from '../../src/components/GoalCard';
 import { getTasksDueSoon } from '../../src/lib/goal-utils';
@@ -22,6 +24,8 @@ export default function HomeScreen() {
   const [tasksDueSoon, setTasksDueSoon] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [unreadNotifications, setUnreadNotifications] = useState(0);
+  const [totalCommitments, setTotalCommitments] = useState(0);
 
   const loadData = async () => {
     try {
@@ -58,6 +62,18 @@ export default function HomeScreen() {
 
       setGoals(goalsWithTasks);
       setTasksDueSoon(getTasksDueSoon(allTasks, 3).slice(0, 3));
+
+      // Load notification count and commitments
+      try {
+        const [unreadCount, activeCommitments] = await Promise.all([
+          notificationRepository.getUnreadCount(),
+          commitmentRepository.getActiveCommitments(),
+        ]);
+        setUnreadNotifications(unreadCount);
+        setTotalCommitments(activeCommitments.reduce((sum, c) => sum + c.amount, 0));
+      } catch {
+        // Ignore errors for these optional features
+      }
     } catch (error: any) {
       Alert.alert('エラー', error.message || 'データの読み込みに失敗しました');
     } finally {
@@ -112,7 +128,32 @@ export default function HomeScreen() {
         <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />
       }
     >
-      <Text style={styles.title}>ダッシュボード</Text>
+      <View style={styles.headerRow}>
+        <Text style={styles.title}>ダッシュボード</Text>
+        <TouchableOpacity
+          style={styles.notificationButton}
+          onPress={() => router.push('/notifications')}
+        >
+          <Text style={styles.notificationIcon}>🔔</Text>
+          {unreadNotifications > 0 && (
+            <View style={styles.notificationBadge}>
+              <Text style={styles.notificationBadgeText}>
+                {unreadNotifications > 9 ? '9+' : unreadNotifications}
+              </Text>
+            </View>
+          )}
+        </TouchableOpacity>
+      </View>
+
+      {/* Active Commitments Summary */}
+      {totalCommitments > 0 && (
+        <View style={styles.commitmentSummary}>
+          <Text style={styles.commitmentIcon}>🔥</Text>
+          <Text style={styles.commitmentText}>
+            コミットメント中: ¥{totalCommitments.toLocaleString()}
+          </Text>
+        </View>
+      )}
 
       {/* Tasks due soon */}
       {tasksDueSoon.length > 0 && (
@@ -192,11 +233,57 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: '#f5f5f5',
   },
+  headerRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
   title: {
     fontSize: 24,
     fontWeight: 'bold',
-    marginBottom: 24,
     color: '#333',
+  },
+  notificationButton: {
+    position: 'relative',
+    padding: 8,
+  },
+  notificationIcon: {
+    fontSize: 24,
+  },
+  notificationBadge: {
+    position: 'absolute',
+    top: 4,
+    right: 4,
+    backgroundColor: '#FF3B30',
+    borderRadius: 10,
+    minWidth: 18,
+    height: 18,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 4,
+  },
+  notificationBadgeText: {
+    color: '#fff',
+    fontSize: 10,
+    fontWeight: 'bold',
+  },
+  commitmentSummary: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFF3E0',
+    borderRadius: 8,
+    padding: 12,
+    marginBottom: 16,
+  },
+  commitmentIcon: {
+    fontSize: 20,
+    marginRight: 8,
+  },
+  commitmentText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#E65100',
   },
   section: {
     marginBottom: 24,
